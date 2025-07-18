@@ -1,0 +1,8 @@
+google-cloud-aiplatform
+google-cloud-storage    
+gTTS
+Flask
+google.adk
+SpeechRecognition
+pyaudio
+vertexai
