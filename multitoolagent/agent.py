@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 import os
 from google.adk.agents import Agent
 from .sub_agents.disease_agent.agent import disease_agent
+from .sub_agents.market_agent.agent import market_agent
+from .sub_agents.scheme_agent.agent import scheme_agent
+ 
 
 
 
@@ -22,5 +25,6 @@ root_agent = Agent(
     
     Always be helpful, practical, and considerate of the farmer's needs.
     """,
-    sub_agents=[disease_agent]
+    sub_agents=[disease_agent, market_agent, scheme_agent],
+   
 )
