@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 import os
 from google.adk.agents import Agent
 from .sub_agents.disease_agent.agent import disease_agent
+from .sub_agents.kisaan_rakshak.agent import kisaan_rakshak
+from .sub_agents.beech_pehchan.agent import beech_pehchan
 from .sub_agents.market_agent.agent import market_agent
 from .sub_agents.scheme_agent.agent import scheme_agent
 from .sub_agents.ngo_alerts_agent.agent import ngo_alerts_agent
@@ -27,6 +29,5 @@ root_agent = Agent(
     
     Always be helpful, practical, and considerate of the farmer's needs.
     """,
-    sub_agents=[auth_agent, disease_agent, market_agent, scheme_agent, ngo_alerts_agent],
-
+    sub_agents=[disease_agent]
 )

@@ -53,7 +53,7 @@ def send_whatsapp_message(to_number: str, message: str) -> str:
         msg = twilio_client.messages.create(
             body=message,
             from_=f"whatsapp:{TWILIO_WHATSAPP_NUMBER}",  # Should be whatsapp:+14155238886 for sandbox
-            to=f"whatsapp:+918"
+            to=f"whatsapp:+918106052094"
         )
         print(f"Message sent to {to_number} | SID: {msg.sid} | Status: {msg.status}")
         return f"✅ Sent to {to_number} (SID: {msg.sid}, Status: {msg.status})"
@@ -61,7 +61,7 @@ def send_whatsapp_message(to_number: str, message: str) -> str:
         print(f"❌ Failed to send to {to_number}: {e}")
         return f"❌ Failed to send to {to_number}: {e}"
 
-MY_TEST_NUMBER = "+9181" 
+MY_TEST_NUMBER = "+918106052094" 
 def order_treatment_supplies(treatment_description: str) -> str:
     model = GenerativeModel("gemini-2.0-flash")
     prompt = f"""
@@ -89,30 +89,56 @@ Do not include disclaimers or explanations. Just return the list in the format a
     full_result = f"📦 Vendor info:\n{vendor_info}\n\n" + "\n".join(send_results)
     return full_result
 
-
+#here
+from google.cloud import vision
+import base64
+import io
+from vertexai.preview.generative_models import GenerativeModel, Image
 
 def analyze_disease_symptoms(symptoms: str, base64_image: str = "") -> str:
     """
-    Analyze disease symptoms and/or a base64-encoded image to provide a basic diagnosis.
+    Analyze disease symptoms and/or a base64-encoded image to provide a basic diagnosis 
+    using Vision AI for image analysis and Gemini for diagnosis.
     """
+    # Initialize Vision AI client
+    vision_client = vision.ImageAnnotatorClient()
+
     prompt = ""
+    vision_results = ""
+
+    if base64_image:
+        # Decode base64 image
+        image_bytes = base64.b64decode(base64_image)
+        
+        # Create Vision AI image object
+        image = vision.Image(content=image_bytes)
+        
+        # Perform label detection
+        label_response = vision_client.label_detection(image=image)
+        labels = label_response.label_annotations
+
+        # Get plant disease-relevant labels
+        plant_labels = [label.description for label in labels 
+                       if any(term in label.description.lower() 
+                       for term in ['plant', 'leaf', 'disease', 'spot', 'blight'])]
+        
+        # Add Vision AI results to prompt
+        if plant_labels:
+            vision_results = f"Vision AI detected: {', '.join(plant_labels)}. "
+            prompt += f"Based on the image analysis showing {vision_results}"
+
     if symptoms:
         symptoms_lower = symptoms.lower()
-        prompt += f"Analyze the following symptoms: {symptoms_lower}. "
-    if base64_image:
-        prompt += "Analyze the attached image for plant disease symptoms. "
-    prompt += "Provide a diagnosis and treatment recommendations."
+        prompt += f"And analyzing these symptoms: {symptoms_lower}. "
+    
+    prompt += "Provide a detailed plant disease diagnosis and treatment recommendations."
 
-    # model = GenerativeModel("gemini-1.5-flash")  # or gemini-2.5 if available
-
-    if base64_image:
-        image_bytes = base64.b64decode(base64_image)
-        image_obj = Image.from_bytes(image_bytes)
-        response = model.generate_content([prompt, image_obj])
-    else:
-        response = model.generate_content(prompt)
+    # Use Gemini model for final diagnosis
+    model = GenerativeModel("gemini-2.5-flash")
+    response = model.generate_content(prompt)
 
     return response.text
+
 
  
 def get_treatment_advice(disease_type: str) -> str:
