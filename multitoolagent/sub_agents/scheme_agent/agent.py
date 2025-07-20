@@ -17,7 +17,7 @@ location = os.getenv("GOOGLE_CLOUD_LOCATION")
 vertexai.init(project=project, location=location)
 
 # Load Gemini model
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-2.0-flash-exp ")
 
 def apply_for_pm_kisan(farmer_profile: dict) -> str:
     # 1. Use Gemini to analyze and recommend schemes
@@ -45,7 +45,7 @@ def apply_for_pm_kisan(farmer_profile: dict) -> str:
 
 scheme_agent = Agent(
     name="scheme_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.0-flash-exp", 
     description="I analyze agricultural schemes and provide recommendations for farmers.",
     instruction="""
     You are an agricultural scheme specialist. Your job is to:
