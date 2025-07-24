@@ -13,7 +13,7 @@ import vertexai
 vertexai.init(project=project, location=location)
 
 # Load Gemini model
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-1.5-flash")
 # response = model.generate_content("Hello, who are you?")
 # print("Agent:", response.text)
 

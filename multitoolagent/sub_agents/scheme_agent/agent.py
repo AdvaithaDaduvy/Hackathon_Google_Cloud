@@ -54,6 +54,7 @@ scheme_agent = Agent(
     2. Summarise the key benefits and eligibility criteria of various schemes in a simple manner.
     3. Provide recommendations for scheme participation
     4. ask farmers if they want to apply for a scheme and apply on their behalf if they agree.
+    5. Ask if the farmer wants to create a reminder for the scheme application deadline.
 
     Use the available tools to help diagnose diseases and provide practical solutions.
     Always ask for more details if the symptoms are unclear.

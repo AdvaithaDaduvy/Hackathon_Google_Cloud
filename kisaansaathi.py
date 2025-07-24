@@ -25,7 +25,7 @@ vertexai.init(project="kisaansaathi-466309", location="us-central1")
 
 
 def classify_intent_gemini(user_input):
-    model = GenerativeModel("gemini-2.5-flash")
+    model = GenerativeModel("gemini-1.5-flash")
     prompt = f"""
     Classify the farmer query into one of these intents:
     [disease_detection, scheme_application, market_forecast, crop_loss, fake_detection]

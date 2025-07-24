@@ -5,7 +5,7 @@ from PIL import Image
 
 # Set up the model with image support
 
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-1.5-flash")
 
 
 
@@ -32,7 +32,7 @@ Respond strictly in the format:
 )
 
 def detect_crop_disease(image_path: str) -> str:
-    model = GenerativeModel("gemini-2.5-flash")
+    model = GenerativeModel("gemini-1.5-flash")
     prompt = (
         "You are a crop disease detection agent. "
         "Analyze the attached image and respond strictly in the format:\n"

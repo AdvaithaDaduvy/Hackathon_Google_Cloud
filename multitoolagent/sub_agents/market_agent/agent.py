@@ -17,7 +17,7 @@ location = os.getenv("GOOGLE_CLOUD_LOCATION")
 vertexai.init(project=project, location=location)
 
 # Load Gemini model
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-1.5-flash")
 tools = [{'google_search': {}}]
 config = {"response_modalities": ["TEXT"], "tools": tools}
 

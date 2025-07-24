@@ -14,7 +14,7 @@ import vertexai
 vertexai.init(project=project, location=location)
 
 # Load Gemini model
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-1.5-flash")
 
 import base64
 from vertexai.preview.generative_models import Image, GenerativeModel
@@ -63,7 +63,7 @@ def send_whatsapp_message(to_number: str, message: str) -> str:
 
 MY_TEST_NUMBER = "+918106052094" 
 def order_treatment_supplies(treatment_description: str) -> str:
-    model = GenerativeModel("gemini-2.0-flash")
+    model = GenerativeModel("gemini-1.5-flash")
     prompt = f"""
 You're helping a farmer find agricultural suppliers.
 
@@ -134,7 +134,7 @@ def analyze_disease_symptoms(symptoms: str, base64_image: str = "") -> str:
     prompt += "Provide a detailed plant disease diagnosis and treatment recommendations."
 
     # Use Gemini model for final diagnosis
-    model = GenerativeModel("gemini-2.5-flash")
+    model = GenerativeModel("gemini-1.5-flash")
     response = model.generate_content(prompt)
 
     return response.text

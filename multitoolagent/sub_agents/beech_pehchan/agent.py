@@ -14,7 +14,7 @@ import vertexai
 vertexai.init(project=project, location=location)
 
 # Load Gemini model
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-1.5-flash")
 
 import base64
 from vertexai.preview.generative_models import Image, GenerativeModel
@@ -157,7 +157,7 @@ def auto_order_verified_product(
     """
     try:
         # Step 1: LLM crafts message with real vendor names for realism
-        model = GenerativeModel("gemini-2.5-flash")
+        model = GenerativeModel("gemini-1.5-flash")
 
         prompt = f"""
 You are writing a WhatsApp message from a farmer to a trusted vendor.

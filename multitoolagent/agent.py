@@ -9,6 +9,7 @@ from .sub_agents.market_agent.agent import market_agent
 from .sub_agents.scheme_agent.agent import scheme_agent
 from .sub_agents.ngo_alerts_agent.agent import ngo_alerts_agent
 from .sub_agents.auth_agent.agent import auth_agent 
+from .sub_agents.kisaan_radio_agent.agent import kisaan_radio_agent
 
 
 
@@ -29,5 +30,5 @@ root_agent = Agent(
     
     Always be helpful, practical, and considerate of the farmer's needs.
     """,
-    sub_agents=[disease_agent]
+    sub_agents=[disease_agent,kisaan_rakshak, beech_pehchan, market_agent, scheme_agent, ngo_alerts_agent, auth_agent , kisaan_radio_agent]
 )

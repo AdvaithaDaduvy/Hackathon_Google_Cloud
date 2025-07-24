@@ -21,7 +21,7 @@ def get_gmail_service():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'C:/Users/kavya/OneDrive/Desktop/hackathon_googlecloud/hackathon_googlecloud/client_secret_533188131034-pf04nucdlmd8dftnordh9rdfnijq292o.apps.googleusercontent.com.json', SCOPES)
+                'C:\\Users\\ADMIN\\Desktop\\Research\\hackathon_googlecloud\\multitoolagent\\client_secret_1019332765714-5pdclfa67mhaffe6uvf6rej440v05s7v.apps.googleusercontent.com.json', SCOPES)
             creds = flow.run_local_server(port=8081)
 
         # Save the credentials for future use

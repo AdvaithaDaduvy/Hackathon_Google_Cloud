@@ -16,7 +16,7 @@ import vertexai
 vertexai.init(project=project, location=location)
 
 # Load Gemini model
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-1.5-flash")
 
 import base64
 from vertexai.preview.generative_models import Image, GenerativeModel
@@ -29,7 +29,7 @@ import json
 import base64
 from typing import Dict, List
 import requests
-from datetime import datetime, timedelta
+
 
 def detect_loss_risk(crop_name: str, location: str, symptoms: str = "", base64_image: str = "", weather_data: dict = {}) -> str:
     """

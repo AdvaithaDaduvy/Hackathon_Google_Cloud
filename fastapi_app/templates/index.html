@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speaker Agent Chat</title>
+</head>
+<body>
+    <h1>🔊 Speaker Agent Chat</h1>
+
+    {% if session_id %}
+        <p><strong>Session ID:</strong> {{ session_id }}</p>
+        <form method="post" action="/create_session">
+            <button type="submit">➕ New Session</button>
+        </form>
+    {% else %}
+        <p>No active session</p>
+        <form method="post" action="/create_session">
+            <button type="submit">➕ Create Session</button>
+        </form>
+    {% endif %}
+
+    <hr>
+    <h3>Chat</h3>
+    <div>
+        {% for msg in messages %}
+            {% if msg.role == "user" %}
+                <p><strong>User:</strong> {{ msg.content }}</p>
+            {% else %}
+                <p><strong>Assistant:</strong> {{ msg.content }}</p>
+                {% if msg.audio_path %}
+                    <audio controls>
+                        <source src="{{ msg.audio_path }}" type="audio/wav">
+                        Your browser does not support audio.
+                    </audio>
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    {% if session_id %}
+        <form method="post" action="/send_message">
+            <input type="text" name="message" placeholder="Type your message..." required>
+            <button type="submit">Send</button>
+        </form>
+    {% endif %}
+</body>
+</html>
