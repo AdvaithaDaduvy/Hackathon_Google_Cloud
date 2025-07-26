@@ -21,7 +21,7 @@ def get_gmail_service():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'C:\\Users\\ADMIN\\Desktop\\Research\\hackathon_googlecloud\\multitoolagent\\client_secret_1019332765714-5pdclfa67mhaffe6uvf6rej440v05s7v.apps.googleusercontent.com.json', SCOPES)
+                'C:\\Users\\ADMIN\\Desktop\\Research\\hackathon_googlecloud\\multitoolagent\\client_secret_2_533188131034-pf04nucdlmd8dftnordh9rdfnijq292o.apps.googleusercontent.com.json', SCOPES)
             creds = flow.run_local_server(port=8081)
 
         # Save the credentials for future use
@@ -45,14 +45,14 @@ def send_email(to, subject, message_text):
     print(f"Message sent. ID: {message['id']}")
 
 
-# if __name__ == "__main__":
-#     # Example usage
-#     ngo_email = "n.kavya1603@gmail.com"
-#     send_email(
-#         to=ngo_email,
-#         subject=f"Crop Loss Report)",
-#         message_text="testing"
-#     )
+if __name__ == "__main__":
+    # Example usage
+    ngo_email = "n.kavya1603@gmail.com"
+    send_email(
+        to=ngo_email,
+        subject=f"Crop Loss Report)",
+        message_text="testing"
+    )
 
 
 # import os

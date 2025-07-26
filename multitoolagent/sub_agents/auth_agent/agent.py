@@ -89,7 +89,7 @@ def get_profile_details(email: str) -> dict:
 
 auth_agent = Agent(
     name="auth_agent",
-    model="gemini-2.0-flash-exp", 
+    model="gemini-2.0-flash", 
     description="Helps farmers with authentication and profile management.",
     instruction="""
     You assist farmers in signing up, logging in, and managing their profiles.
@@ -103,3 +103,28 @@ auth_agent = Agent(
     """,
     tools=[sign_in_farmer, register_farmer],
 )
+
+
+
+
+
+
+
+
+# auth_agent = Agent(
+#     name="auth_agent",
+#     model="gemini-2.0-flash", 
+#     description="Helps farmers with authentication and profile management.",
+#     instruction="""
+#     You assist farmers in signing up, logging in, and managing their profiles.
+#     - Collect email and password for authentication
+#     - Allow farmers to update their profile information
+#     - Make sure the you use the same farmer account and that account details throught the session for all agents.
+#     - Ensure secure handling of sensitive data
+#     and Then:
+#     - Provide feedback on the success or failure of authentication attempts
+#     - Use the same details to set the farmer's context in the ADK.
+#     - Use the same details for all other agents to access the farmer's profile.
+#     """,
+#     tools=[sign_in_farmer, register_farmer],
+# )

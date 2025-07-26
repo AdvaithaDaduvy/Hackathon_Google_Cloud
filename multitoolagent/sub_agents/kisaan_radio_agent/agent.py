@@ -6,7 +6,7 @@ from multitoolagent.sub_agents.auth_agent.agent import db
 from firebase_admin import auth
 
 
-model = GenerativeModel("gemini-2.5-flash")
+model = GenerativeModel("gemini-2.0-flash")
 # === HELPER ===
 
 def _generate_fun_reminder(text: str) -> str:
@@ -121,7 +121,7 @@ def general_updates() -> str:
 
 kisaan_radio_agent = Agent(
     name="kisaan_radio_agent",
-    model="gemini-2.5-flash",
+    model="gemini-2.0-flash",
     description="Creates and reads fun reminders for farmers from their Firestore profile.",
     instruction="""
     You're Kisaan Radio 📻 — a cheerful agent that helps farmers remember important tasks with fun messages!

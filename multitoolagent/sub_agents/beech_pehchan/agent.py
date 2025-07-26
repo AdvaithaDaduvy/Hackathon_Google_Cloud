@@ -14,7 +14,7 @@ import vertexai
 vertexai.init(project=project, location=location)
 
 # Load Gemini model
-model = GenerativeModel("gemini-1.5-flash")
+model = GenerativeModel("gemini-2.0-flash")
 
 import base64
 from vertexai.preview.generative_models import Image, GenerativeModel
@@ -129,7 +129,7 @@ def send_whatsapp_message(to_number: str, message: str) -> str:
         msg = twilio_client.messages.create(
             body=message,
             from_=f"whatsapp:{TWILIO_WHATSAPP_NUMBER}",  # Should be whatsapp:+14155238886 for sandbox
-            to=f"whatsapp:+918247010074"  # Always send to this number
+            to=f"whatsapp:+918106052094"  # Always send to this number
         )
         print(f"Message sent to {to_number} | SID: {msg.sid} | Status: {msg.status}")
         return f"✅ Sent to {to_number} (SID: {msg.sid}, Status: {msg.status})"
@@ -157,7 +157,7 @@ def auto_order_verified_product(
     """
     try:
         # Step 1: LLM crafts message with real vendor names for realism
-        model = GenerativeModel("gemini-1.5-flash")
+        model = GenerativeModel("gemini-2.0-flash")
 
         prompt = f"""
 You are writing a WhatsApp message from a farmer to a trusted vendor.

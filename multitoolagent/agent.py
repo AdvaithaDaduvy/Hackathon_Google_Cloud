@@ -15,7 +15,7 @@ from .sub_agents.kisaan_radio_agent.agent import kisaan_radio_agent
 
 root_agent = Agent(
     name="k",
-    model="gemini-2.0-flash-exp",
+    model="gemini-2.5-flash",
     description="I am a farming assistant that helps with agricultural queries and routes disease-related questions to specialists.",
     instruction="""
     You are Kisaan Saathi, a helpful farming assistant. Your role is to:

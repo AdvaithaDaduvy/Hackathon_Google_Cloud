@@ -16,7 +16,7 @@ os.environ["OTEL_SDK_DISABLED"] = "true"
 load_dotenv()
 vertexai.init(project=os.getenv("GOOGLE_CLOUD_PROJECT"), location=os.getenv("GOOGLE_CLOUD_LOCATION"))
 
-model = GenerativeModel("gemini-2.0-flash-exp")
+model = GenerativeModel("gemini-2.0-flash")
 
 def generate_report_content(farmer_data: dict) -> str:
     prompt = f"""
@@ -128,7 +128,7 @@ def handle_farmer_loss(farmer_data: dict, confirmation: Optional[str] = None) ->
 
 ngo_alerts_agent = Agent(
     name="ngo_alerts_agent",
-    model="gemini-2.0-flash-exp",
+    model="gemini-2.0-flash",
     description="Helps farmers report crop losses and alerts NGOs/government bodies.",
     instruction="""
     You collect crop loss details from farmers, including:

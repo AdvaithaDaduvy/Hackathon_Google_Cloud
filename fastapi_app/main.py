@@ -10,6 +10,7 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import logging
+import threading
 
 # Add logging
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +41,8 @@ templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 SESSIONS = {}
+# Add a lock to prevent race conditions
+sessions_lock = threading.Lock()
 
 class MessageRequest(BaseModel):
     message: str
@@ -56,8 +59,9 @@ def create_session_payload():
 @app.get("/")
 def home(request: Request):
     user_id = request.cookies.get("user_id", f"user-{uuid.uuid4()}")
-    session_id = SESSIONS.get(user_id, {}).get("session_id")
-    messages = SESSIONS.get(user_id, {}).get("messages", [])
+    with sessions_lock:
+        session_id = SESSIONS.get(user_id, {}).get("session_id")
+        messages = SESSIONS.get(user_id, {}).get("messages", [])
     return templates.TemplateResponse("index.html", {
         "request": request,
         "session_id": session_id,
@@ -94,10 +98,11 @@ def create_session(request: Request):
             session_id = response_data.get("id")  # The session ID is in the "id" field
             
             if session_id:
-                SESSIONS[user_id] = {
-                    "session_id": session_id,
-                    "messages": []
-                }
+                with sessions_lock:
+                    SESSIONS[user_id] = {
+                        "session_id": session_id,
+                        "messages": []
+                    }
                 logger.info(f"Session created successfully: {session_id}")
             else:
                 logger.error("No session ID returned from SDK server")
@@ -113,13 +118,15 @@ def create_session(request: Request):
 @app.post("/send_message")
 def send_message(request: Request, message: str = Form(...)):
     user_id = request.cookies.get("user_id")
-    session = SESSIONS.get(user_id)
+    with sessions_lock:
+        session = SESSIONS.get(user_id)
     
     if not session:
         return RedirectResponse("/", status_code=302)
     
     session_id = session["session_id"]
-    session["messages"].append({"role": "user", "content": message})
+    with sessions_lock:
+        session["messages"].append({"role": "user", "content": message})
     
     logger.info(f"Sending message to SDK server: {message}")
     
@@ -144,7 +151,7 @@ def send_message(request: Request, message: str = Form(...)):
             f"{API_BASE_URL}/run",
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
-            timeout=30
+            timeout=60  # Increased timeout
         )
         
         logger.info(f"SDK server response status: {res.status_code}")
@@ -169,11 +176,12 @@ def send_message(request: Request, message: str = Form(...)):
                             audio_path = f"/static/{file_name}" if os.path.exists(f"static/{file_name}") else None
             
             if assistant_message:
-                session["messages"].append({
-                    "role": "assistant",
-                    "content": assistant_message,
-                    "audio_path": audio_path
-                })
+                with sessions_lock:
+                    session["messages"].append({
+                        "role": "assistant",
+                        "content": assistant_message,
+                        "audio_path": audio_path
+                    })
                 logger.info(f"Assistant response: {assistant_message[:100]}")
     except Exception as e:
         logger.error(f"Error sending message to SDK: {e}")
@@ -184,7 +192,8 @@ def send_message(request: Request, message: str = Form(...)):
 @app.get("/api/session")
 def get_session_api(request: Request):
     user_id = request.cookies.get("user_id", f"user-{uuid.uuid4()}")
-    session = SESSIONS.get(user_id, {})
+    with sessions_lock:
+        session = SESSIONS.get(user_id, {})
     
     response_data = {
         "user_id": user_id,
@@ -210,7 +219,6 @@ def create_session_api(request: Request):
         payload = create_session_payload()
         
         logger.info(f"Making session creation request to: {url}")
-        logger.info(f"Payload: {json.dumps(payload, indent=2)}")
         
         res = requests.post(
             url,
@@ -220,17 +228,17 @@ def create_session_api(request: Request):
         )
         
         logger.info(f"SDK server response status: {res.status_code}")
-        logger.info(f"SDK server response text: {res.text}")
         
         if res.status_code == 200:
             response_data = res.json()
             session_id = response_data.get("id")  # The session ID is in the "id" field
             
             if session_id:
-                SESSIONS[user_id] = {
-                    "session_id": session_id,
-                    "messages": []
-                }
+                with sessions_lock:
+                    SESSIONS[user_id] = {
+                        "session_id": session_id,
+                        "messages": []
+                    }
                 
                 return JSONResponse({
                     "success": True,
@@ -261,7 +269,16 @@ def create_session_api(request: Request):
 @app.post("/api/send_message")
 def send_message_api(request: Request, message_data: MessageRequest):
     user_id = request.cookies.get("user_id")
-    session = SESSIONS.get(user_id)
+    
+    # Check if user_id exists
+    if not user_id:
+        return JSONResponse({
+            "success": False,
+            "error": "No user ID found"
+        })
+    
+    with sessions_lock:
+        session = SESSIONS.get(user_id)
     
     logger.info(f"API: Received message from user {user_id}: {message_data.message}")
     
@@ -284,11 +301,12 @@ def send_message_api(request: Request, message_data: MessageRequest):
                 session_id = response_data.get("id")
                 
                 if session_id:
-                    SESSIONS[user_id] = {
-                        "session_id": session_id,
-                        "messages": []
-                    }
-                    session = SESSIONS[user_id]
+                    with sessions_lock:
+                        SESSIONS[user_id] = {
+                            "session_id": session_id,
+                            "messages": []
+                        }
+                        session = SESSIONS[user_id]
                     logger.info(f"Auto-created session: {session_id}")
                 else:
                     return JSONResponse({
@@ -310,7 +328,8 @@ def send_message_api(request: Request, message_data: MessageRequest):
     message = message_data.message
     
     # Add user message to session
-    session["messages"].append({"role": "user", "content": message})
+    with sessions_lock:
+        session["messages"].append({"role": "user", "content": message})
     
     try:
         # Send message to SDK server with correct format
@@ -332,99 +351,116 @@ def send_message_api(request: Request, message_data: MessageRequest):
         }
         
         logger.info(f"Making request to SDK server: {url}")
-        logger.info(f"Payload: {json.dumps(payload, indent=2)}")
+        logger.info(f"Request payload: {json.dumps(payload, indent=2)}")
         
+        # Increased timeout to handle long-running agent operations
         res = requests.post(
             url,
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
-            timeout=30
+            timeout=120  # 2 minutes timeout for agent operations
         )
         
         logger.info(f"SDK server response status: {res.status_code}")
-        logger.info(f"SDK server response headers: {dict(res.headers)}")
-        logger.info(f"SDK server response text: {res.text[:1000]}")
+        logger.info(f"SDK server response text (first 1000 chars): {res.text[:1000]}")
         
         if res.status_code == 200:
             try:
                 events = res.json()
-                assistant_message = None
+                assistant_messages = []
                 audio_path = None
                 
-                logger.info(f"Processing response from SDK server")
-                logger.info(f"Response type: {type(events)}")
-                logger.info(f"Response content: {json.dumps(events, indent=2)[:1000]}")
+                logger.info(f"Processing {len(events)} events from SDK server")
                 
-                # Handle different response formats
+                # Handle list of events
                 if isinstance(events, list):
-                    # If it's a list of events
                     for i, event in enumerate(events):
-                        logger.info(f"Event {i}: {json.dumps(event, indent=2)[:500]}")
-                        content = event.get("content", {})
-                        parts = content.get("parts", [{}])
+                        logger.info(f"Processing event {i}")
                         
-                        if content.get("role") == "model" and len(parts) > 0 and "text" in parts[0]:
-                            assistant_message = parts[0]["text"]
-                            logger.info(f"Found assistant message: {assistant_message[:100]}")
-                        
-                        if len(parts) > 0 and "functionResponse" in parts[0]:
-                            func_resp = parts[0]["functionResponse"]
-                            if func_resp.get("name") == "text_to_speech":
-                                response_text = func_resp.get("response", {}).get("result", {}).get("content", [{}])[0].get("text", "")
-                                if "File saved as:" in response_text:
-                                    file_name = response_text.split("File saved as:")[1].strip().split()[0].strip(".")
-                                    audio_path = f"/static/{file_name}" if os.path.exists(f"static/{file_name}") else None
-                elif isinstance(events, dict):
-                    # If it's a single response object
-                    logger.info(f"Single response: {json.dumps(events, indent=2)[:500]}")
-                    
-                    # Check if there's a direct message
+                        # Check for content in the event
+                        if "content" in event:
+                            content = event["content"]
+                            parts = content.get("parts", [])
+                            
+                            # Look for model responses
+                            if content.get("role") == "model" and parts:
+                                for part in parts:
+                                    # Extract text content
+                                    if "text" in part and part["text"].strip():
+                                        text_content = part["text"].strip()
+                                        assistant_messages.append(text_content)
+                                        logger.info(f"Found model text: {text_content[:100]}...")
+                                    
+                                    # Handle function calls
+                                    if "function_call" in part:
+                                        func_call = part["function_call"]
+                                        logger.info(f"Found function call: {func_call.get('name')}")
+                                    
+                                    # Handle function responses
+                                    if "function_response" in part:
+                                        func_resp = part["function_response"]
+                                        logger.info(f"Found function response: {func_resp.get('name')}")
+                                        
+                                        # Handle text_to_speech function
+                                        if func_resp.get("name") == "text_to_speech":
+                                            response_text = func_resp.get("response", {}).get("result", {}).get("content", [{}])[0].get("text", "")
+                                            if "File saved as:" in response_text:
+                                                file_name = response_text.split("File saved as:")[1].strip().split()[0].strip(".")
+                                                audio_path = f"/static/{file_name}" if os.path.exists(f"static/{file_name}") else None
+                                        
+                                        # Handle other function responses
+                                        elif "response" in func_resp and "result" in func_resp["response"]:
+                                            func_result = func_resp["response"]["result"]
+                                            if isinstance(func_result, str) and func_result.strip():
+                                                assistant_messages.append(f"Function result: {func_result}")
+                                                logger.info(f"Added function result: {func_result[:100]}...")
+                
+                # Combine all messages
+                final_message = "\n\n".join(assistant_messages) if assistant_messages else None
+                
+                # If we still don't have a message, try alternative parsing
+                if not final_message and isinstance(events, dict):
                     if "message" in events:
-                        assistant_message = events["message"]
+                        final_message = events["message"]
                     elif "content" in events:
                         content = events["content"]
                         if isinstance(content, str):
-                            assistant_message = content
+                            final_message = content
                         elif isinstance(content, dict) and "text" in content:
-                            assistant_message = content["text"]
-                    elif "response" in events:
-                        assistant_message = events["response"]
-                    elif "events" in events and len(events["events"]) > 0:
-                        # Check if there are events in the response
-                        for event in events["events"]:
-                            content = event.get("content", {})
-                            parts = content.get("parts", [{}])
-                            if content.get("role") == "model" and len(parts) > 0 and "text" in parts[0]:
-                                assistant_message = parts[0]["text"]
-                                break
+                            final_message = content["text"]
                 
-                # If we still don't have a message, try to extract from any text field
-                if not assistant_message:
-                    assistant_message = f"Received response from agent: {str(events)[:200]}..."
+                # Final fallback
+                if not final_message:
+                    logger.error(f"Could not extract message from events: {json.dumps(events, indent=2)[:500]}")
+                    final_message = "I processed your request but couldn't format the response properly. Please check the logs."
                 
-                if assistant_message:
-                    session["messages"].append({
-                        "role": "assistant",
-                        "content": assistant_message,
-                        "audio_path": audio_path
-                    })
+                # Add assistant message to session
+                if final_message:
+                    with sessions_lock:
+                        session["messages"].append({
+                            "role": "assistant",
+                            "content": final_message,
+                            "audio_path": audio_path
+                        })
+                    logger.info(f"Added assistant message: {final_message[:100]}...")
                 
                 return JSONResponse({
                     "success": True,
                     "messages": session["messages"],
-                    "latest_response": assistant_message,
-                    "audio_path": audio_path,
-                    "raw_response": events  # Include raw response for debugging
+                    "latest_response": final_message,
+                    "audio_path": audio_path
                 })
+                
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON response: {e}")
                 # Treat as plain text response
                 assistant_message = res.text
-                session["messages"].append({
-                    "role": "assistant",
-                    "content": assistant_message,
-                    "audio_path": None
-                })
+                with sessions_lock:
+                    session["messages"].append({
+                        "role": "assistant",
+                        "content": assistant_message,
+                        "audio_path": None
+                    })
                 
                 return JSONResponse({
                     "success": True,
@@ -444,7 +480,7 @@ def send_message_api(request: Request, message_data: MessageRequest):
         logger.error("Timeout connecting to SDK server")
         return JSONResponse({
             "success": False,
-            "error": "Timeout connecting to agent server",
+            "error": "Request timed out. The agent may still be processing your request.",
             "messages": session["messages"]
         })
     except requests.exceptions.ConnectionError:
