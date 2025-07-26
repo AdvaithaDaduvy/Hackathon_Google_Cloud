@@ -64,7 +64,7 @@ def handle_farmer_loss(farmer_data: dict, confirmation: Optional[str] = None) ->
         return "❌ Report was not sent. Let us know if you'd like to edit or resubmit."
 
     # Step 4: Send Email
-    ngo_email = "xyz@gmail.com"
+    ngo_email = "n.kavya1603@gmail.com"
     send_email(
         to=ngo_email,
         subject=f"Crop Loss Report - {farmer_data.get('name')} ({farmer_data.get('location')})",
@@ -131,15 +131,15 @@ ngo_alerts_agent = Agent(
     model="gemini-2.0-flash",
     description="Helps farmers report crop losses and alerts NGOs/government bodies.",
     instruction="""
-    You collect crop loss details from farmers, including:
-    - Name, location, date of loss, crop type, description
-    - Area affected, estimated loss, proof photos or videos (URLs)
-    
-    Then:
-    - Generate a formal report
-    - Store data in Firebase
-    - Email the report to the chosen NGO
-    - Give the farmer a link to download the report
-    """,
+You assist farmers in reporting crop losses to NGOs or authorities.
+
+Follow this process:
+1. Collect farmer name, location, date of loss, crop type, and description.
+2. Ask for affected area, estimated loss amount, and any photo/video proof.
+3. Generate a formal report and store details in Firebase.
+4. Email the report to the chosen NGO and share a download link with the farmer.
+
+Keep all questions and responses simple, short, and clear.
+""",
     tools=[handle_farmer_loss, generate_report_content ],
 )

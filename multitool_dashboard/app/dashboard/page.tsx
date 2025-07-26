@@ -96,7 +96,6 @@ export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
-  const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -108,6 +107,79 @@ export default function Dashboard() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const gttsAudioRef = useRef<HTMLAudioElement>(null)
+
+  // Separate message states for each feature
+  const [overviewMessages, setOverviewMessages] = useState<Message[]>([])
+  const [chatMessages, setChatMessages] = useState<Message[]>([])
+  const [diseaseMessages, setDiseaseMessages] = useState<Message[]>([])
+  const [authMessages, setAuthMessages] = useState<Message[]>([])
+  const [marketMessages, setMarketMessages] = useState<Message[]>([])
+  const [schemeMessages, setSchemeMessages] = useState<Message[]>([])
+  const [preventionMessages, setPreventionMessages] = useState<Message[]>([])
+  const [reportMessages, setReportMessages] = useState<Message[]>([])
+  const [reminderMessages, setReminderMessages] = useState<Message[]>([])
+
+  // Helper function to get current messages based on active feature
+  const getCurrentMessages = () => {
+    switch (activeFeature) {
+      case "overview":
+        return overviewMessages
+      case "chat":
+        return chatMessages
+      case "disease-diagnosis":
+        return diseaseMessages
+      case "product-authentication":
+        return authMessages
+      case "market-trends":
+        return marketMessages
+      case "scheme-recommendations":
+        return schemeMessages
+      case "crop-loss-prevention":
+        return preventionMessages
+      case "crop-loss-report":
+        return reportMessages
+      case "reminders":
+        return reminderMessages
+      default:
+        return chatMessages
+    }
+  }
+
+  // Helper function to set current messages based on active feature
+  const setCurrentMessages = (newMessages: Message[]) => {
+    switch (activeFeature) {
+      case "overview":
+        setOverviewMessages(newMessages)
+        break
+      case "chat":
+        setChatMessages(newMessages)
+        break
+      case "disease-diagnosis":
+        setDiseaseMessages(newMessages)
+        break
+      case "product-authentication":
+        setAuthMessages(newMessages)
+        break
+      case "market-trends":
+        setMarketMessages(newMessages)
+        break
+      case "scheme-recommendations":
+        setSchemeMessages(newMessages)
+        break
+      case "crop-loss-prevention":
+        setPreventionMessages(newMessages)
+        break
+      case "crop-loss-report":
+        setReportMessages(newMessages)
+        break
+      case "reminders":
+        setReminderMessages(newMessages)
+        break
+      default:
+        setChatMessages(newMessages)
+        break
+    }
+  }
 
   // Multilingual states
   const [selectedLanguage, setSelectedLanguage] = useState("en")
@@ -190,7 +262,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [getCurrentMessages(), activeFeature])
 
   useEffect(() => {
     // Initialize speech recognition with language support
@@ -252,15 +324,16 @@ export default function Dashboard() {
 
   // Auto-play the latest assistant message using multilingual GTTS
   useEffect(() => {
-    if (autoPlayEnabled && messages.length > 0) {
-      const latestMessage = messages[messages.length - 1]
+    const currentMessages = getCurrentMessages()
+    if (autoPlayEnabled && currentMessages.length > 0) {
+      const latestMessage = currentMessages[currentMessages.length - 1]
       if (latestMessage.role === "assistant" && !isSpeaking && !isPlayingGTTS) {
         setTimeout(() => {
-          playMessageAudio(latestMessage, messages.length - 1)
+          playMessageAudio(latestMessage, currentMessages.length - 1)
         }, 500)
       }
     }
-  }, [messages, autoPlayEnabled])
+  }, [getCurrentMessages(), autoPlayEnabled, activeFeature])
 
   const logout = () => {
     localStorage.removeItem("kisaan_user")
@@ -342,7 +415,7 @@ export default function Dashboard() {
             gtts_audio_path: data.audio_path,
             timestamp: new Date().toLocaleTimeString(),
           }
-          setMessages((prev) => [...prev, testMessage])
+          setCurrentMessages([...getCurrentMessages(), testMessage])
         } else {
           console.error("Multilingual test failed:", data.error)
         }
@@ -507,12 +580,12 @@ export default function Dashboard() {
             ...msg,
             timestamp: new Date().toLocaleTimeString(),
           }))
-          setMessages(formattedMessages)
+          setChatMessages(formattedMessages)
         } else {
-          setMessages([
+          setChatMessages([
             {
               role: "assistant",
-              content: `🌾 Welcome to KisaanSaathi Dashboard!
+              content: `🌾 Namaste! I'm your Kisaan Saathi. How can I help you today?
 
 **Your agricultural services are ready:**
 - ✅ KisaanSaathi AI: Connected
@@ -521,12 +594,12 @@ export default function Dashboard() {
 - 🌐 Auto-translation enabled
 
 **Available Services:**
-🌱 Disease Diagnosis & Treatment
-🛡️ Product Authentication  
-📈 Market Trends & Prices
-📋 Government Schemes
-🚨 Crop Loss Reporting
-📻 Kisaan Radio Reminders
+🌱 Fasal Suraksha - Disease Diagnosis & Treatment
+🛡️ Beej Pehchan - Product Authentication  
+📈 Bazaar Dost - Market Trends & Prices
+📋 Yojna Sahayak - Government Schemes
+🚨 Sankat Mitra - Crop Loss Reporting
+📻 Kisaan Radio - Task Reminders
 
 Select any service from the sidebar or chat with me directly!`,
               language: "en",
@@ -551,17 +624,10 @@ Select any service from the sidebar or chat with me directly!`,
     setSessionId(demoSessionId)
     setUserId(demoUserId)
 
-    setMessages([
+    setChatMessages([
       {
         role: "assistant",
-        content: `🌾 Welcome to KisaanSaathi Dashboard!
-
-**Demo Mode Active:**
-- ❌ Connect FastAPI backend for full functionality
-- ❌ Multilingual features require backend connection
-- ✅ Basic interface available
-
-Please start the FastAPI backend server on port 8001 for full functionality.`,
+        content: "Namaste! I'm your Kisaan Saathi. How can I help you today?",
         timestamp: new Date().toLocaleTimeString(),
       },
     ])
@@ -580,7 +646,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
       timestamp: new Date().toLocaleTimeString(),
     }
 
-    setMessages((prev) => [...prev, userMessage])
+    setCurrentMessages([...getCurrentMessages(), userMessage])
     setInputMessage("")
     setIsLoading(true)
 
@@ -602,7 +668,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
               ...msg,
               timestamp: new Date().toLocaleTimeString(),
             }))
-            setMessages(formattedMessages)
+            setCurrentMessages(formattedMessages)
 
             // Update detected language if provided
             if (data.detected_language) {
@@ -621,7 +687,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
           content: `Demo Response: Thank you for "${messageToSend}"! Connect the backend for real AI responses with multilingual support and GTTS audio.`,
           timestamp: new Date().toLocaleTimeString(),
         }
-        setMessages((prev) => [...prev, demoResponse])
+        setCurrentMessages([...getCurrentMessages(), demoResponse])
       }, 1000)
     }
 
@@ -631,6 +697,44 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
   const handleFeatureSubmit = async (data: any, flow: string) => {
     setIsLoading(true)
     stopAllAudio()
+
+    // Create user-friendly message instead of showing JSON
+    let userMessage = ""
+    switch (flow) {
+      case "diagnosePlantDisease":
+        userMessage = `I need help diagnosing a plant disease. Symptoms: ${data.symptoms}`
+        break
+      case "authenticateProduct":
+        userMessage = "I want to verify the authenticity of a product using its photo."
+        break
+      case "getMarketTrends":
+        userMessage = `Please show me market trends for ${data.commodity} in ${data.location}.`
+        break
+      case "agriculturalSchemeRecommendation":
+        userMessage = `I need government scheme recommendations for my farm in ${data.location}.`
+        break
+      case "cropLossPrevention":
+        userMessage = `I need crop protection advice for ${data.cropType} in ${data.location}.`
+        break
+      case "reportCropLoss":
+        userMessage = `I want to report crop loss: ${data.lossPercentage}% loss of ${data.cropType} due to ${data.reasonForLoss}.`
+        break
+      case "createReminder":
+        userMessage = `Please add this reminder: ${data.task}`
+        break
+      default:
+        userMessage = "I need assistance with my farming query."
+    }
+
+    // Add user message to chat
+    const userChatMessage: Message = {
+      role: "user",
+      content: userMessage,
+      language: selectedLanguage,
+      timestamp: new Date().toLocaleTimeString(),
+    }
+
+    setCurrentMessages([...getCurrentMessages(), userChatMessage])
 
     if (isOnlineMode) {
       try {
@@ -652,7 +756,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
               ...msg,
               timestamp: new Date().toLocaleTimeString(),
             }))
-            setMessages(formattedMessages)
+            setCurrentMessages(formattedMessages)
           }
         }
       } catch (error) {
@@ -678,14 +782,32 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
           setTimeout(async () => {
             await checkBackendAndInitialize()
           }, 1000)
-          setMessages([])
+          // Clear all message states
+          setOverviewMessages([])
+          setChatMessages([])
+          setDiseaseMessages([])
+          setAuthMessages([])
+          setMarketMessages([])
+          setSchemeMessages([])
+          setPreventionMessages([])
+          setReportMessages([])
+          setReminderMessages([])
         }
       } catch (error) {
         console.error("Failed to create session:", error)
       }
     } else {
       initializeDemoMode()
-      setMessages([])
+      // Clear all message states
+      setOverviewMessages([])
+      setChatMessages([])
+      setDiseaseMessages([])
+      setAuthMessages([])
+      setMarketMessages([])
+      setSchemeMessages([])
+      setPreventionMessages([])
+      setReportMessages([])
+      setReminderMessages([])
     }
 
     setIsLoading(false)
@@ -715,18 +837,18 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
 
   const features = [
     { id: "overview", name: "Dashboard Overview", icon: Home, description: "Main dashboard view" },
-    { id: "chat", name: "AI Chat", icon: MessageSquare, description: "Direct conversation with AI" },
-    { id: "disease-diagnosis", name: "Disease Diagnosis", icon: Leaf, description: "Identify plant diseases" },
+    { id: "chat", name: "Kisaan Saathi", icon: MessageSquare, description: "Direct conversation with AI" },
+    { id: "disease-diagnosis", name: "Fasal Suraksha", icon: Leaf, description: "Identify plant diseases" },
     {
       id: "product-authentication",
-      name: "Product Authentication",
+      name: "Beej Pehchan",
       icon: Shield,
       description: "Verify product authenticity",
     },
-    { id: "market-trends", name: "Market Trends", icon: TrendingUp, description: "Price information" },
-    { id: "scheme-recommendations", name: "Government Schemes", icon: FileText, description: "Scheme recommendations" },
-    { id: "crop-loss-prevention", name: "Crop Protection", icon: Sprout, description: "Prevent crop damage" },
-    { id: "crop-loss-report", name: "Loss Report", icon: Users, description: "Report crop losses" },
+    { id: "market-trends", name: "Bazaar Dost", icon: TrendingUp, description: "Price information" },
+    { id: "scheme-recommendations", name: "Yojna Sahayak", icon: FileText, description: "Scheme recommendations" },
+    { id: "crop-loss-prevention", name: "Kisaan Rakshak", icon: Sprout, description: "Prevent crop damage" },
+    { id: "crop-loss-report", name: "Sankat Mitra", icon: Users, description: "Report crop losses" },
     { id: "reminders", name: "Kisaan Radio", icon: Radio, description: "Task reminders" },
   ]
 
@@ -776,7 +898,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Messages</p>
-                <p className="text-2xl font-bold text-green-800">{messages.length}</p>
+                <p className="text-2xl font-bold text-green-800">{getCurrentMessages().length}</p>
               </div>
             </div>
           </CardContent>
@@ -1321,9 +1443,9 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Header */}
-        <div className="kisaan-header p-4 shadow-lg">
+        <div className="kisaan-header p-4 shadow-lg flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-headline font-semibold text-foreground">
@@ -1332,7 +1454,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
               <p className="text-sm text-muted-foreground">
                 {isOnlineMode
                   ? `Multilingual Support: ${availableLanguages[selectedLanguage as keyof typeof availableLanguages]} • GTTS Audio • Auto-Translation`
-                  : "Demo mode - Start FastAPI server on port 8001 for multilingual support"}
+                  : ""}
               </p>
             </div>
             <Button variant="outline" size="sm">
@@ -1341,7 +1463,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
           </div>
         </div>
 
-        <div className="flex-1 flex">
+        <div className="flex-1 flex min-h-0">
           {/* Feature Content - Full Width for Overview, Sidebar for Others */}
           {activeFeature === "overview" ? (
             <div className="flex-1 overflow-y-auto bg-background/50">{renderFeatureContent()}</div>
@@ -1354,7 +1476,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
               <div className="flex-1 flex flex-col">
                 <ScrollArea className="flex-1 p-6">
                   <div className="max-w-4xl mx-auto space-y-4">
-                    {messages.length === 0 ? (
+                    {getCurrentMessages().length === 0 ? (
                       <div className="text-center py-8">
                         <div className="p-4 bg-green-100 rounded-full mb-4 border-2 border-green-300 inline-flex">
                           <LayoutGrid className="h-8 w-8 text-green-600" />
@@ -1368,7 +1490,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
                         </p>
                       </div>
                     ) : (
-                      messages.map((message, index) => (
+                      getCurrentMessages().map((message, index) => (
                         <div
                           key={index}
                           className={cn("flex gap-3", message.role === "user" ? "justify-end" : "justify-start")}
@@ -1535,7 +1657,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
             <div className="flex-1 flex flex-col">
               <ScrollArea className="flex-1 p-6">
                 <div className="max-w-4xl mx-auto space-y-4">
-                  {messages.length === 0 ? (
+                  {getCurrentMessages().length === 0 ? (
                     <Card className="border-dashed kisaan-card">
                       <CardContent className="flex flex-col items-center justify-center py-12">
                         <div className="p-4 bg-green-100 rounded-full mb-4 border-2 border-green-300">
@@ -1549,7 +1671,7 @@ Please start the FastAPI backend server on port 8001 for full functionality.`,
                       </CardContent>
                     </Card>
                   ) : (
-                    messages.map((message, index) => (
+                    getCurrentMessages().map((message, index) => (
                       <div
                         key={index}
                         className={cn("flex gap-3", message.role === "user" ? "justify-end" : "justify-start")}

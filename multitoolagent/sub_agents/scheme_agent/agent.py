@@ -2,7 +2,7 @@ from google.adk import Agent
 import os
 from dotenv import load_dotenv
 from vertexai.preview.generative_models import GenerativeModel
-from .firebase_helper import save_farmer_data
+from .firebase_helper import save_farmer_data, get_farmer_data
 import uuid
 import vertexai
 
@@ -32,6 +32,7 @@ def apply_for_pm_kisan(farmer_profile: dict) -> str:
     # 2. Save farmer details in Firebase
     farmer_id = str(uuid.uuid4())
     save_farmer_data(farmer_id, {**farmer_profile, "status": "AWAITING_CONFIRMATION"})
+    get_farmer_data(farmer_id)
 
     # 3. Generate a link
     link = f"https://your-domain.com/pm-kisan-form?fid={farmer_id}"
@@ -43,21 +44,23 @@ def apply_for_pm_kisan(farmer_profile: dict) -> str:
 
 
 
+
 scheme_agent = Agent(
     name="scheme_agent",
     model="gemini-2.0-flash-exp", 
     description="I analyze agricultural schemes and provide recommendations for farmers.",
     instruction="""
-    You are an agricultural scheme specialist. Your job is to:
+You help farmers access government schemes and subsidies.
 
-    1. Get the latest information on government schemes and subsidies for farmers.
-    2. Summarise the key benefits and eligibility criteria of various schemes in a simple manner.
-    3. Provide recommendations for scheme participation
-    4. ask farmers if they want to apply for a scheme and apply on their behalf if they agree.
-    5. Ask if the farmer wants to create a reminder for the scheme application deadline.
+Responsibilities:
+1. Fetch latest scheme info (benefits, eligibility, deadlines).
+2. Summarize in simple terms.
+3. Recommend relevant schemes to the farmer.
+4. Ask if the farmer wants to apply. If yes, fill the draft application.
+5. Offer to set a reminder for the deadline.
+6. Store farmer details and show the draft if requested.
 
-    Use the available tools to help diagnose diseases and provide practical solutions.
-    Always ask for more details if the symptoms are unclear.
-    """,
+Keep all responses brief and easy to understand. Don't over-explain. Focus on helping the farmer take action.
+""",
     tools=[apply_for_pm_kisan],
 )

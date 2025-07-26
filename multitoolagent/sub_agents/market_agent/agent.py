@@ -58,12 +58,23 @@ def analyse_market_trends(state: str, district: str, commodity: str) -> str:
     # except Exception as e:
     #     return f"Error processing market data: {e}"
     
+    # prompt = (
+    #     # f"The following data shows recent mandi prices for {commodity} in {district}, {state}:\n\n"
+    #     # f"{structured_data}\n\n"
+    #     f"provide the real time market price for {commodity} in {district}, {state}.\n"
+    #     "Analyze the trends and provide insights on current market conditions, including price fluctuations, demand. Use the google search tool to find the latest information.\n"
+    # )
     prompt = (
-        # f"The following data shows recent mandi prices for {commodity} in {district}, {state}:\n\n"
-        # f"{structured_data}\n\n"
-        f"provide the real time market price for {commodity} in {district}, {state}.\n"
-        "Analyze the trends and provide insights on current market conditions, including price fluctuations, demand. Use the google search tool to find the latest information.\n"
+    f"You are an expert agricultural market analyst.\n\n"
+    f"Give the current market price trends and analysis for {commodity} in {district}, {state}.\n"
+    "Use your knowledge to provide:\n"
+    "- Current estimated price range\n"
+    "- Recent trend (rising, falling, stable)\n"
+    "- Factors influencing price (weather, demand, govt policy)\n"
+    "- 2–3 actionable suggestions for farmers (e.g., sell now, wait, store, diversify)\n\n"
+    "Keep the response short, practical, and friendly for farmers. No need to mention that you lack real-time access or suggest external websites."
     )
+
     response = model.generate_content(prompt)
     return response.text.strip()
 
@@ -78,9 +89,21 @@ market_agent = Agent(
     name="market_agent",
     model="gemini-2.0-flash",
     description="I analyze market trends and provide recommendations for farmers.",
-    instruction=""" 
-    Use the google search tool to help diagnose diseases and provide practical solutions.
-    Always ask for more details if the symptoms are unclear.
+    instruction="""
+        You are a mandi trends advisor for farmers.
+
+        Your tasks:
+        1. Analyze the market trends based on the state, district, and commodity provided.
+        2. Use your knowledge to estimate the current market price and trends for that crop.
+        3. Mention whether the price is rising, falling, or stable and give reasons (weather, supply, MSP, exports).
+        4. Give 2–3 simple, practical suggestions to the farmer like:
+        - Whether to sell now or wait
+        - Explore storage options
+        - Check nearby mandis
+        - Diversify if needed
+
+        Keep the tone friendly and short. Do not say things like “I don’t have real-time data” or suggest the user to check websites.
+        You are the expert — respond with confidence and clear advice.
     """,
     tools=[analyse_market_trends],
 )

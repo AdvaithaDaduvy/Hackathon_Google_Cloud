@@ -5,12 +5,19 @@ import uuid
 import tempfile
 from pathlib import Path
 from gtts import gTTS
-from logging import logger 
+import logging
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+import requests
+import json
+
+# Initialize FastAPI app
+app = FastAPI()
 
 # Initialize translator
 translator = Translator()
 
-# Supported languages for KisaanSaathi
+# Supported languages for KisaanSaathi with Indian accent variants
 SUPPORTED_LANGUAGES = {
     'en': 'English',
     'hi': 'Hindi (हिंदी)',
@@ -26,6 +33,17 @@ SUPPORTED_LANGUAGES = {
     'as': 'Assamese (অসমীয়া)',
     'ur': 'Urdu (اردو)'
 }
+
+# Define audio directory
+AUDIO_DIR = Path("static/audio")
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+
+# Define session storage
+SESSIONS = {}
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 def detect_language(text: str) -> str:
     """
@@ -83,14 +101,58 @@ def translate_text(text: str, target_language: str, source_language: str = 'auto
 
 def generate_multilingual_speech_audio(text: str, language: str = "en") -> str:
     """
-    Generate speech audio using Google Text-to-Speech with language support
+    Generate speech audio using Google Text-to-Speech with Indian accents and multilingual support
     Returns the path to the generated audio file
     """
     try:
-        # Clean text for better speech
+        # Enhanced text cleaning for better pronunciation
         clean_text = text.replace("🌾", "").replace("🌱", "").replace("🛡️", "").replace("📈", "").replace("📋", "").replace("🚨", "").replace("📻", "").replace("✅", "").replace("❌", "")
         clean_text = clean_text.replace("**", "").replace("*", "").replace("`", "")
         clean_text = clean_text.replace("#", "").strip()
+        
+        # Language-specific text improvements
+        if language == 'en':
+            # English improvements for Indian accent
+            clean_text = clean_text.replace("KisaanSaathi", "Kisaan Saathi")
+            clean_text = clean_text.replace("AI", "A I")
+            clean_text = clean_text.replace("API", "A P I")
+            clean_text = clean_text.replace("GTTS", "G T T S")
+            clean_text = clean_text.replace("WhatsApp", "WhatsApp")
+            clean_text = clean_text.replace("NGO", "N G O")
+            clean_text = clean_text.replace("backend", "back end")
+            clean_text = clean_text.replace("frontend", "front end")
+            clean_text = clean_text.replace("multilingual", "multi lingual")
+        elif language == 'hi':
+            # Hindi improvements
+            clean_text = clean_text.replace("KisaanSaathi", "किसान साथी")
+            clean_text = clean_text.replace("AI", "ए आई")
+            clean_text = clean_text.replace("WhatsApp", "व्हाट्सएप")
+        elif language == 'bn':
+            # Bengali improvements
+            clean_text = clean_text.replace("KisaanSaathi", "কিষাণ সাথী")
+        elif language == 'te':
+            # Telugu improvements
+            clean_text = clean_text.replace("KisaanSaathi", "కిసాన్ సాథీ")
+        elif language == 'ta':
+            # Tamil improvements
+            clean_text = clean_text.replace("KisaanSaathi", "கிசான் சாத்தி")
+        elif language == 'gu':
+            # Gujarati improvements
+            clean_text = clean_text.replace("KisaanSaathi", "કિસાન સાથી")
+        elif language == 'mr':
+            # Marathi improvements
+            clean_text = clean_text.replace("KisaanSaathi", "किसान साथी")
+        
+        # Add natural pauses for better speech flow
+        clean_text = clean_text.replace(".", ". ")
+        clean_text = clean_text.replace("!", "! ")
+        clean_text = clean_text.replace("?", "? ")
+        clean_text = clean_text.replace(":", ": ")
+        clean_text = clean_text.replace(";", "; ")
+        clean_text = clean_text.replace(",", ", ")
+        
+        # Remove extra spaces
+        clean_text = " ".join(clean_text.split())
         
         if not clean_text:
             return None
@@ -99,8 +161,33 @@ def generate_multilingual_speech_audio(text: str, language: str = "en") -> str:
         audio_filename = f"speech_{language}_{uuid.uuid4().hex[:8]}.mp3"
         audio_path = AUDIO_DIR / audio_filename
         
-        # Create gTTS object with specified language
-        tts = gTTS(text=clean_text, lang=language, slow=False)
+        # Enhanced language mapping with Indian accent variants
+        language_mapping = {
+            'en': 'en-in',  # English (India) - Indian accent
+            'hi': 'hi-in',  # Hindi (India)
+            'bn': 'bn-in',  # Bengali (India)
+            'te': 'te-in',  # Telugu (India)
+            'mr': 'mr-in',  # Marathi (India)
+            'ta': 'ta-in',  # Tamil (India)
+            'gu': 'gu-in',  # Gujarati (India)
+            'kn': 'kn-in',  # Kannada (India)
+            'ml': 'ml-in',  # Malayalam (India)
+            'pa': 'pa-in',  # Punjabi (India)
+            'or': 'or-in',  # Odia (India)
+            'as': 'as-in',  # Assamese (India)
+            'ur': 'ur-in'   # Urdu (India)
+        }
+        
+        # Use Indian variant if available
+        tts_language = language_mapping.get(language, language)
+        
+        # Create gTTS object with Indian accent and optimized settings
+        tts = gTTS(
+            text=clean_text, 
+            lang=tts_language, 
+            slow=False,  # Normal speed for clarity
+            tld='co.in'  # Use Indian domain for better Indian accent
+        )
         
         # Save audio file
         tts.save(str(audio_path))
@@ -110,9 +197,20 @@ def generate_multilingual_speech_audio(text: str, language: str = "en") -> str:
         
     except Exception as e:
         logger.error(f"Error generating multilingual speech: {e}")
-        # Fallback to English if language not supported
+        # Fallback to English (India) if language not supported
         if language != 'en':
-            return generate_multilingual_speech_audio(text, 'en')
+            try:
+                logger.info(f"Falling back to English (India) for language {language}")
+                tts_fallback = gTTS(
+                    text=clean_text, 
+                    lang='en-in', 
+                    slow=False,
+                    tld='co.in'
+                )
+                tts_fallback.save(str(audio_path))
+                return f"/static/audio/{audio_filename}"
+            except Exception as fallback_error:
+                logger.error(f"Fallback to English (India) also failed: {fallback_error}")
         return None
 
 # Add language preference to session management
@@ -192,13 +290,13 @@ def detect_message_language(text_data: dict):
         "language_name": SUPPORTED_LANGUAGES.get(detected_lang, "Unknown")
     }
 
-# Update the send_message_api function to include multilingual support
+# Update the send_message_api function to include improved multilingual support
 @app.post("/api/send_message")
-def send_message_api(request: Request, message_data: MessageRequest):
+def send_message_api(request: Request, message_data: dict):
     user_id = request.cookies.get("user_id")
     session = SESSIONS.get(user_id)
     
-    logger.info(f"API: Received message from user {user_id}: {message_data.message}")
+    logger.info(f"API: Received message from user {user_id}: {message_data['message']}")
     
     if not session:
         logger.warning(f"No session found for user {user_id}")
@@ -243,7 +341,7 @@ def send_message_api(request: Request, message_data: MessageRequest):
             })
     
     session_id = session["session_id"]
-    message = message_data.message
+    message = message_data["message"]
     user_language = get_user_language_preference(user_id)
     
     # Detect input language
@@ -346,15 +444,15 @@ def send_message_api(request: Request, message_data: MessageRequest):
                 translated_response = translate_text(assistant_message, user_language, 'en')
                 final_response = translated_response['translated_text']
                 
-                # Generate multilingual GTTS audio for assistant message
+                # Generate improved multilingual GTTS audio for assistant message
                 gtts_audio_path = None
                 if final_response:
-                    logger.info(f"Generating GTTS audio in {user_language} for assistant response...")
+                    logger.info(f"Generating improved GTTS audio with Indian accent in {user_language} for assistant response...")
                     gtts_audio_path = generate_multilingual_speech_audio(final_response, user_language)
                     if gtts_audio_path:
-                        logger.info(f"Multilingual GTTS audio generated: {gtts_audio_path}")
+                        logger.info(f"Improved multilingual GTTS audio generated: {gtts_audio_path}")
                     else:
-                        logger.warning("Failed to generate multilingual GTTS audio")
+                        logger.warning("Failed to generate improved multilingual GTTS audio")
                 
                 if assistant_message:
                     session["messages"].append({
@@ -363,7 +461,7 @@ def send_message_api(request: Request, message_data: MessageRequest):
                         "original_content": assistant_message if translated_response['translation_needed'] else None,
                         "language": user_language,
                         "audio_path": audio_path,  # Keep original audio if available
-                        "gtts_audio_path": gtts_audio_path  # Add multilingual GTTS audio path
+                        "gtts_audio_path": gtts_audio_path  # Add improved multilingual GTTS audio path
                     })
                 
                 # Clean up old audio files periodically
@@ -377,7 +475,7 @@ def send_message_api(request: Request, message_data: MessageRequest):
                     "user_language": user_language,
                     "detected_language": detected_language,
                     "audio_path": audio_path,
-                    "gtts_audio_path": gtts_audio_path,  # Include multilingual GTTS audio path in response
+                    "gtts_audio_path": gtts_audio_path,  # Include improved multilingual GTTS audio path in response
                     "raw_response": events
                 })
             except json.JSONDecodeError as e:
@@ -388,7 +486,7 @@ def send_message_api(request: Request, message_data: MessageRequest):
                 translated_response = translate_text(assistant_message, user_language, 'en')
                 final_response = translated_response['translated_text']
                 
-                # Generate multilingual GTTS audio for plain text response
+                # Generate improved multilingual GTTS audio for plain text response
                 gtts_audio_path = generate_multilingual_speech_audio(final_response, user_language)
                 
                 session["messages"].append({
@@ -440,18 +538,18 @@ def send_message_api(request: Request, message_data: MessageRequest):
             "messages": session["messages"]
         })
 
-# Add endpoint to test multilingual functionality
+# Add endpoint to test improved multilingual functionality
 @app.post("/api/test_multilingual")
 def test_multilingual(test_data: dict):
-    """Test multilingual translation and TTS functionality"""
-    text = test_data.get("text", "Hello! This is a test of multilingual support.")
+    """Test improved multilingual translation and TTS functionality with Indian accents"""
+    text = test_data.get("text", "Hello! This is a test of multilingual support with improved Indian accent.")
     language = test_data.get("language", "hi")
     
     try:
         # Test translation
         translation_result = translate_text(text, language, 'en')
         
-        # Test multilingual TTS
+        # Test improved multilingual TTS with Indian accent
         audio_path = None
         if translation_result['translated_text']:
             audio_path = generate_multilingual_speech_audio(translation_result['translated_text'], language)
@@ -463,7 +561,8 @@ def test_multilingual(test_data: dict):
             "language": language,
             "language_name": SUPPORTED_LANGUAGES.get(language, "Unknown"),
             "audio_path": audio_path,
-            "translation_metadata": translation_result
+            "translation_metadata": translation_result,
+            "accent_info": f"Using Indian accent variant for {language}"
         }
     except Exception as e:
         return {
@@ -471,5 +570,28 @@ def test_multilingual(test_data: dict):
             "error": str(e)
         }
 
-# Add requirements for multilingual support
-# You'll need to install: pip install googletrans==4.0.0rc1
+# Function to create session payload
+def create_session_payload():
+    return {
+        "appName": APP_NAME,
+        "userId": user_id,
+        "sessionId": session_id,
+        "newMessage": {
+            "parts": [
+                {
+                    "text": ai_message  # Send English version to AI
+                }
+            ],
+            "role": "user"
+        },
+        "streaming": False,
+        "stateDelta": {}
+    }
+
+# Function to clean up old audio files
+def cleanup_old_audio_files():
+    # Implement cleanup logic here
+    pass
+
+# Add requirements for improved multilingual support
+# You'll need to install: pip install googletrans==4.0.0rc1 gtts
