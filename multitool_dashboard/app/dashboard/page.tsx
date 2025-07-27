@@ -47,6 +47,11 @@ import {
   LayoutGrid,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+// dashboard/page.tsx
+import { app } from "@/lib/firebase"; // adjust path based on your folder structure
+
+
+
 
 interface Message {
   role: "user" | "assistant"
@@ -633,139 +638,342 @@ Select any service from the sidebar or chat with me directly!`,
     ])
   }
 
-  const sendMessage = async (customMessage?: string, flow?: string) => {
-    const messageToSend = customMessage || inputMessage
-    if (!messageToSend.trim() || isLoading) return
+  // const sendMessage = async (customMessage?: string, flow?: string) => {
+  //   const messageToSend = customMessage || inputMessage
+  //   if (!messageToSend.trim() || isLoading) return
 
-    stopAllAudio()
+  //   stopAllAudio()
 
-    const userMessage: Message = {
-      role: "user",
-      content: messageToSend,
-      language: selectedLanguage,
-      timestamp: new Date().toLocaleTimeString(),
-    }
+  //   const userMessage: Message = {
+  //     role: "user",
+  //     content: messageToSend,
+  //     language: selectedLanguage,
+  //     timestamp: new Date().toLocaleTimeString(),
+  //   }
 
-    setCurrentMessages([...getCurrentMessages(), userMessage])
-    setInputMessage("")
-    setIsLoading(true)
+  //   setCurrentMessages([...getCurrentMessages(), userMessage])
+  //   setInputMessage("")
+  //   setIsLoading(true)
 
-    if (isOnlineMode) {
-      try {
-        const response = await fetch(`http://localhost:${fastApiPort}/api/send_message`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ message: messageToSend }),
-        })
+  //   if (isOnlineMode) {
+  //     try {
+  //       const response = await fetch(`http://localhost:${fastApiPort}/api/send_message`, {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         credentials: "include",
+  //         body: JSON.stringify({ message: messageToSend }),
+  //       })
 
-        if (response.ok) {
-          const data = await response.json()
-          if (data.messages) {
-            const formattedMessages = data.messages.map((msg: any) => ({
-              ...msg,
-              timestamp: new Date().toLocaleTimeString(),
-            }))
+  //       if (response.ok) {
+  //         const data = await response.json()
+  //         if (data.messages) {
+  //           const formattedMessages = data.messages.map((msg: any) => ({
+  //             ...msg,
+  //             timestamp: new Date().toLocaleTimeString(),
+  //           }))
+  //           setCurrentMessages(formattedMessages)
+
+  //           // Update detected language if provided
+  //           if (data.detected_language) {
+  //             setDetectedLanguage(data.detected_language)
+  //           }
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to send message:", error)
+  //     }
+  //   } else {
+  //     // Demo response
+  //     setTimeout(() => {
+  //       const demoResponse: Message = {
+  //         role: "assistant",
+  //         content: `Demo Response: Thank you for "${messageToSend}"! Connect the backend for real AI responses with multilingual support and GTTS audio.`,
+  //         timestamp: new Date().toLocaleTimeString(),
+  //       }
+  //       setCurrentMessages([...getCurrentMessages(), demoResponse])
+  //     }, 1000)
+  //   }
+
+  //   setIsLoading(false)
+  // }
+
+const sendMessage = async (customMessage?: string, flow?: string) => {
+  const messageToSend = customMessage || inputMessage
+  if (!messageToSend.trim() || isLoading) return
+
+  stopAllAudio()
+
+  const userMessage: Message = {
+    role: "user",
+    content: messageToSend,
+    language: selectedLanguage,
+    timestamp: new Date().toLocaleTimeString(),
+  }
+
+  // Optimistically add user message to UI
+  setCurrentMessages([...getCurrentMessages(), userMessage])
+  setInputMessage("")
+  setIsLoading(true)
+
+  if (isOnlineMode) {
+    try {
+      const response = await fetch(`http://localhost:${fastApiPort}/api/send_message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ 
+          message: messageToSend,
+          language: selectedLanguage  // Add this line to pass the selected language
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.messages) {
+          // Find the latest assistant message in the returned messages
+          const latestAssistantMessage = data.messages.slice().reverse().find((msg: any) => msg.role === "assistant");
+
+          if (latestAssistantMessage) {
+               // Update messages with the full message list from backend, which includes translations and audio paths
+              const formattedMessages = data.messages.map((msg: any) => ({
+                ...msg,
+                timestamp: new Date().toLocaleTimeString(),
+              }))
             setCurrentMessages(formattedMessages)
 
             // Update detected language if provided
             if (data.detected_language) {
               setDetectedLanguage(data.detected_language)
             }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to send message:", error)
-      }
-    } else {
-      // Demo response
-      setTimeout(() => {
-        const demoResponse: Message = {
-          role: "assistant",
-          content: `Demo Response: Thank you for "${messageToSend}"! Connect the backend for real AI responses with multilingual support and GTTS audio.`,
-          timestamp: new Date().toLocaleTimeString(),
-        }
-        setCurrentMessages([...getCurrentMessages(), demoResponse])
-      }, 1000)
-    }
 
-    setIsLoading(false)
+          } else {
+               console.warn("No new assistant message found in backend response:", data);
+                // If no assistant message, at least update with the messages provided
+                 const formattedMessages = data.messages.map((msg: any) => ({
+                  ...msg,
+                  timestamp: new Date().toLocaleTimeString(),
+                }))
+              setCurrentMessages(formattedMessages)
+          }
+
+
+        } else {
+           console.error("Backend response indicated failure or missing messages:", data);
+           const errorMessages: Message[] = data.messages || [];
+            setCurrentMessages([...getCurrentMessages(), ...errorMessages, {
+              role: "assistant",
+              content: data.error || "An error occurred while processing your request.",
+              timestamp: new Date().toLocaleTimeString(),
+              language: "en" // Default to English for error messages
+            }]);
+        }
+      } else {
+         console.error("Failed to send message. HTTP Status:", response.status);
+         const errorText = await response.text();
+           setCurrentMessages([...getCurrentMessages(), {
+              role: "assistant",
+              content: `Error: Could not connect to backend or receive valid response (Status: ${response.status}). Details: ${errorText.substring(0, 100)}...`,
+              timestamp: new Date().toLocaleTimeString(),
+              language: "en"
+            }]);
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error)
+       setCurrentMessages([...getCurrentMessages(), {
+          role: "assistant",
+          content: `Error: Failed to send message to backend. Please check console for details. ${error}`,
+          timestamp: new Date().toLocaleTimeString(),
+          language: "en"
+        }]);
+    }
+  } else {
+    // Demo response for offline mode
+    setTimeout(() => {
+      const demoResponse: Message = {
+        role: "assistant",
+        content: `Demo Response: Thank you for "${messageToSend}"! Connect the backend for real AI responses with multilingual support and GTTS audio.`,
+        timestamp: new Date().toLocaleTimeString(),
+        language: "en" // Demo response is in English
+      }
+      setCurrentMessages([...getCurrentMessages(), demoResponse])
+    }, 1000)
   }
+
+  setIsLoading(false)
+}
+
+
+  // const handleFeatureSubmit = async (data: any, flow: string) => {
+  //   setIsLoading(true)
+  //   stopAllAudio()
+
+  //   // Create user-friendly message instead of showing JSON
+  //   let userMessage = ""
+  //   switch (flow) {
+  //     case "diagnosePlantDisease":
+  //       userMessage = `I need help diagnosing a plant disease. Symptoms: ${data.symptoms}`
+  //       break
+  //     case "authenticateProduct":
+  //       userMessage = "I want to verify the authenticity of a product using its photo."
+  //       break
+  //     case "getMarketTrends":
+  //       userMessage = `Please show me market trends for ${data.commodity} in ${data.location}.`
+  //       break
+  //     case "agriculturalSchemeRecommendation":
+  //       userMessage = `I need government scheme recommendations for my farm in ${data.location}.`
+  //       break
+  //     case "cropLossPrevention":
+  //       userMessage = `I need crop protection advice for ${data.cropType} in ${data.location}.`
+  //       break
+  //     case "reportCropLoss":
+  //       userMessage = `I want to report crop loss: ${data.lossPercentage}% loss of ${data.cropType} due to ${data.reasonForLoss}.`
+  //       break
+  //     case "createReminder":
+  //       userMessage = `Please add this reminder: ${data.task}`
+  //       break
+  //     default:
+  //       userMessage = "I need assistance with my farming query."
+  //   }
+
+  //   // Add user message to chat
+  //   const userChatMessage: Message = {
+  //     role: "user",
+  //     content: userMessage,
+  //     language: selectedLanguage,
+  //     timestamp: new Date().toLocaleTimeString(),
+  //   }
+
+  //   setCurrentMessages([...getCurrentMessages(), userChatMessage])
+
+  //   if (isOnlineMode) {
+  //     try {
+  //       const response = await fetch(`http://localhost:${fastApiPort}/api/send_message`, {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         credentials: "include",
+  //         body: JSON.stringify({
+  //           message: `Flow: ${flow}\nData: ${JSON.stringify(data, null, 2)}`,
+  //         }),
+  //       })
+
+  //       if (response.ok) {
+  //         const responseData = await response.json()
+  //         if (responseData.messages) {
+  //           const formattedMessages = responseData.messages.map((msg: any) => ({
+  //             ...msg,
+  //             timestamp: new Date().toLocaleTimeString(),
+  //           }))
+  //           setCurrentMessages(formattedMessages)
+  //         }
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to submit feature data:", error)
+  //     }
+  //   }
+
+  //   setIsLoading(false)
+  // }
 
   const handleFeatureSubmit = async (data: any, flow: string) => {
-    setIsLoading(true)
-    stopAllAudio()
+  setIsLoading(true)
+  stopAllAudio()
 
-    // Create user-friendly message instead of showing JSON
-    let userMessage = ""
-    switch (flow) {
-      case "diagnosePlantDisease":
-        userMessage = `I need help diagnosing a plant disease. Symptoms: ${data.symptoms}`
-        break
-      case "authenticateProduct":
-        userMessage = "I want to verify the authenticity of a product using its photo."
-        break
-      case "getMarketTrends":
-        userMessage = `Please show me market trends for ${data.commodity} in ${data.location}.`
-        break
-      case "agriculturalSchemeRecommendation":
-        userMessage = `I need government scheme recommendations for my farm in ${data.location}.`
-        break
-      case "cropLossPrevention":
-        userMessage = `I need crop protection advice for ${data.cropType} in ${data.location}.`
-        break
-      case "reportCropLoss":
-        userMessage = `I want to report crop loss: ${data.lossPercentage}% loss of ${data.cropType} due to ${data.reasonForLoss}.`
-        break
-      case "createReminder":
-        userMessage = `Please add this reminder: ${data.task}`
-        break
-      default:
-        userMessage = "I need assistance with my farming query."
-    }
-
-    // Add user message to chat
-    const userChatMessage: Message = {
-      role: "user",
-      content: userMessage,
-      language: selectedLanguage,
-      timestamp: new Date().toLocaleTimeString(),
-    }
-
-    setCurrentMessages([...getCurrentMessages(), userChatMessage])
-
-    if (isOnlineMode) {
-      try {
-        const response = await fetch(`http://localhost:${fastApiPort}/api/send_message`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            message: `Flow: ${flow}\nData: ${JSON.stringify(data, null, 2)}`,
-          }),
-        })
-
-        if (response.ok) {
-          const responseData = await response.json()
-          if (responseData.messages) {
-            const formattedMessages = responseData.messages.map((msg: any) => ({
-              ...msg,
-              timestamp: new Date().toLocaleTimeString(),
-            }))
-            setCurrentMessages(formattedMessages)
-          }
-        }
-      } catch (error) {
-        console.error("Failed to submit feature data:", error)
-      }
-    }
-
-    setIsLoading(false)
+  // Create user-friendly message instead of showing JSON
+  let userMessage = ""
+  switch (flow) {
+    case "diagnosePlantDisease":
+      userMessage = `I need help diagnosing a plant disease. Symptoms: ${data.symptoms}`
+      break
+    case "authenticateProduct":
+      userMessage = "I want to verify the authenticity of a product using its photo."
+      break
+    case "getMarketTrends":
+      userMessage = `Please show me market trends for ${data.commodity} in ${data.location}.`
+      break
+    case "agriculturalSchemeRecommendation":
+      userMessage = `I need government scheme recommendations for my farm in ${data.location}.`
+      break
+    case "cropLossPrevention":
+      userMessage = `I need crop protection advice for ${data.cropType} in ${data.location}.`
+      break
+    case "reportCropLoss":
+      userMessage = `I want to report crop loss: ${data.lossPercentage}% loss of ${data.cropType} due to ${data.reasonForLoss}.`
+      break
+    case "createReminder":
+      userMessage = `Please add this reminder: ${data.task}`
+      break
+    default:
+      userMessage = "I need assistance with my farming query."
   }
+
+  // Add user message to chat first
+  const userChatMessage: Message = {
+    role: "user",
+    content: userMessage,
+    language: selectedLanguage,
+    timestamp: new Date().toLocaleTimeString(),
+  }
+  setCurrentMessages([...getCurrentMessages(), userChatMessage])
+
+  // Use the sendMessage function to send the user-friendly message instead of raw data
+  if (isOnlineMode) {
+    try {
+      const response = await fetch(`http://localhost:${fastApiPort}/api/send_message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          message: userMessage,  // CLEAN MESSAGE ONLY
+          flow: flow,           // SEND FLOW AS SEPARATE FIELD
+          data: data,           // SEND DATA AS SEPARATE FIELD
+          language: selectedLanguage,
+        }),
+      })
+
+      if (response.ok) {
+        const responseData = await response.json()
+        if (responseData.success && responseData.messages) {
+          const formattedMessages = responseData.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date().toLocaleTimeString(),
+          }))
+          setCurrentMessages(formattedMessages)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to submit feature data:", error)
+      // Add error message to chat
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "Sorry, I couldn't process your request. Please try again.",
+        timestamp: new Date().toLocaleTimeString(),
+        language: "en"
+      }
+      setCurrentMessages([...getCurrentMessages(), errorMessage])
+    }
+  } else {
+    // Demo response
+    setTimeout(() => {
+      const demoResponse: Message = {
+        role: "assistant",
+        content: `Demo Response: I received your request for ${flow}. Connect the backend for real AI processing of your agricultural needs.`,
+        timestamp: new Date().toLocaleTimeString(),
+        language: "en"
+      }
+      setCurrentMessages([...getCurrentMessages(), demoResponse])
+    }, 1000)
+  }
+
+  setIsLoading(false)
+}
 
   const createNewSession = async () => {
     setIsLoading(true)
@@ -2097,3 +2305,6 @@ function CropLossReportForm({
     </Card>
   )
 }
+
+
+
